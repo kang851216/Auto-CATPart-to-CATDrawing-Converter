@@ -67,7 +67,7 @@ Make sure your sheet name matches the value entered in the UI.
 2. Start the script:
 
 ```powershell
-python "drawing generation_final.py"
+python "CATPart-to-CATDrawing Batch Export.py"
 ```
 
 3. In the UI, fill in:
@@ -109,26 +109,6 @@ Generated drawing files are saved to the selected `Drawing output folder`.
 
 - Confirm BOM data type and required columns.
 - Confirm corresponding `.CATPart` files exist in selected part folder.
-
-## Publish To GitHub
-
-Run these commands in your project folder (`Auto CATDrawing Generation`):
-
-```powershell
-git init
-git add .
-git commit -m "Initial commit: CATPart to CATDrawing batch converter"
-```
-
-Create a new empty repository on GitHub, then connect and push:
-
-```powershell
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
-```
-
-If your repository already exists locally, skip `git init` and just add/commit/push.
 
 ## Recommended Next Improvements
 
