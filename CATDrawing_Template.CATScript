@@ -1,0 +1,1869 @@
+' (c) 2006 ENOVIA SmarTeam
+
+
+' ****************************************************************************
+' 	This scripts handles the title block and frame handling in CATIA
+'
+'  	Language: VBScript
+' 	Version:       V5R16SP6
+'   Modified by: Angela TAM
+'   Modified date: 16 Jan 2008
+'   Modified according to AEL Requirement
+' ****************************************************************************
+
+Public Documents1    As Documents
+Public DrwDocument   As DrawingDocument
+Public DrwSheets     As DrawingSheets
+Public DrwSheet      As DrawingSheet
+Public DrwView       As DrawingView
+Public InitialView   As DrawingView
+Public DrwTexts      As DrawingTexts
+Public Text          As DrawingText
+Public Tableaux      As DrawingTables
+Public TableauModif  As DrawingTable
+Public Fact          As Factory2D
+Public Ligne         As Line2D
+Public Cercle        As Circle2D
+Public Selection     As Selection
+Public GeomElems     As GeometricElements
+Public Hauteur       As Double            ' Hauteur de page (Height of page)
+Public Largeur       As Double            ' Largeur de page (Breadth of page)
+Public Marge         As Double            ' Distance Verticale entre les bordures de la page et le cadre (Vertical Distance between the borders of the page and the frame)
+Public OH            As Double            ' Origine horizontale du point en bas à droite du cartouche (Horizontal origin of the point down to the right of the cartouche)
+Public OV            As Double            ' Origine verticale du point en bas à droite du cartouche (Vertical origin of the point down to the right of the cartouche)
+Public Col(12)  As Double            ' coordonnees des colonnes (coordonnees of the columns)
+Public Row(9)        As Double            ' coordonnees des lignes (coordonnees of the lines)
+Public colRev(5)     As double            ' coordonnees des colonnes des blocs de revision (coordonnees of the columns of the blocks of revision)
+Public TranslationX  As Double            ' Translation horizontale pour un changement de standard (Horizontal translation for a change of standard)
+Public TranslationY  As Double            ' Translation verticale pour un changement de standard (Vertical translation for a change of standard)
+Public displayFormat As String            ' Format selon le standard (Format according to standard)
+Public DateTemp      As String
+Public sheetFormat   As catPaperSize      ' Format en tant que valeur entiere (Format as entiere value)
+Public Parameters1   As Parameters
+Public revision      As double
+Public ProductDrawn  As ProductDocument
+
+Const RulerLength   = 200
+Const MacroID       = "Drawing_Titleblock_Sample1"
+Const RevRowHauteur = 4
+
+
+
+' ****************************************************************************
+'     Change the value of the label below to the company name
+'
+Text_11 = ""
+Text_11C = ""
+Text_11Z = ""
+
+const text_productname=""
+const text_jobnumber=""
+const text_designer =""
+const text_proofreader=""
+const text_approver=""
+const text_drawer = ""
+const text_approval=""
+
+
+' ****************************************************************************
+
+
+Public Text_TB_HT As Double     'Title Block Test Height
+Text_TB_HT = 2.0  'Title Block Label Text Height
+
+
+
+Const Message_1 = "The TitleBlock will be update !"
+Const Message_2 = "The Titleblock was created by another macro named: "
+Const Message_3 = "You must create a view linked to a 3D component saved in SMARTEAM Design Express !"
+Const Message_4 = "The first view created doesn't contain links to 3D !"
+Const Message_5 = "Please, save the 3D document pointed by this drawing in SMARTEAM Design Express ! "
+Const Message_6 = "Do you really want to delete all ?"
+Const Message_7 = "ATTENTION"
+Const Message_8 = "Comment: Limited to 2 lines, don't use ENTER, the new line will be introduced according to the text lenth."
+Const Message_9 =  "Description"
+Const Message_10 =  "None"
+Const Message_11 =  "This document has been "
+Const Message_12 =  " by :"
+Const Message_13 =  "Verifyer's Name"
+
+Const MessageSC_1 = ""
+Const MessageSC_2 = ""
+Const MessageSC_3 = ""
+Const MessageSC_4 = ""
+Const MessageSC_5 = ""
+Const MessageSC_6 = ""
+Const MessageSC_7 = ""
+Const MessageSC_8 = ""
+Const MessageSC_9 = ""
+Const MessageSC_10 =  ""
+Const MessageSC_11 =  ""
+Const MessageSC_12 =  ""
+Const MessageSC_13 =  ""
+
+
+Const  Text_01 = "FORMAT"
+Const  Text_02 = "SCALE"
+Const  Text_03 = "."
+Const  Text_04 = "MASS"
+Const  Text_05 = "XXX"			
+Const  Text_06 = "REFERENCE"
+Const  Text_07 = "SHEET"
+Const  Text_08 = ""
+Const  Text_08a = "REV."
+Const  Text_09 = "."
+Const  Text_10 = "XXX"                
+Const  Text_12 = "APPROVED BY"
+Const  Text_13 = "DATE (y/m/d)"
+Const  Text_14 = "DRAWN BY"
+' Text_15 defined in sub
+Const  Text_16 = "MATERIAL"          
+
+Const  Text_17 = " "
+Const  Text_18 = " "
+Const  Text_19 = " "
+Const  Text_20 = " "
+
+'Const  Text_21 = "DESIGNATION"  
+
+const Text_21="DRAWING NUMBER" 
+const Text_100="PARENT SCALE"   
+
+
+Const  Text_21_ID = "ST CAT ID"
+Const  Text_22_Dwg ="ST DWG ID"
+Const  Text_22 = "图号 DRAWING NUMBER"
+
+Const	Text_23 = "REVISION"
+Const	Text_24 = "NIL"
+Const	Text_25 = "X/X"
+Const  Text_26 = "none"
+Const  Text_27 = "CXXX-XXX"
+Const  Text_28 = "TXXXX"
+Const  Text_29 = "."
+Const  Text_30 = "*parameter: AEL dwg. no.*"
+Const  Text_31 = "*parameter: AEL project name*"
+Const  Text_32 = "*parameter: Layout / Detail / Shop Drawing*"
+
+' Parameters Names
+Const  Text_41 = "Scale"
+Const  Text_42 = "Mass"
+Const  Text_43 = "Material"
+Const  Text_44 = "Format"
+Const  Text_45 = "Drawing_Number"
+Const  Text_46 = "Designation"
+Const  Text_47 = "Ref_3D_Model"
+Const  Text_48 = "Drawn_by"
+Const  Text_49 = "Approved_by"
+Const  Text_50 = "Project_Name"    
+Const  Text_51 = "Creation_Date"
+Const  Text_52 = "Revision" 
+Const  Text_113 = "Definition"
+Const  Text_114 = "Description"
+
+
+Const  Text_53 = "AEL_Dwg_No."     
+Const  Text_54 = "AEL_Dwg_Scope"     
+const text_101="xxx"
+const text_102="          "
+const date_format="          "
+const Text_103="xxxxxxxxxx"
+const text_110="pname"
+const text_111="jobnumber"
+const text_112="parent layer"
+
+
+
+Sub CATMain()
+	CATInit
+  	On Error Resume Next
+   	name = DrwTexts.GetItem("Reference_" + MacroID).Name
+' msgbox MacroID
+   	If Err.Number <> 0 Then
+     	Err.Clear
+     	name = Text_26
+	End If
+  	On Error Goto 0
+  	If (name = Text_26) Then
+    	CATDrw_Create
+  	Else   
+    	ReDimension
+  	End If
+End Sub
+
+Sub CATDrw_Create()
+  '-------------------------------------------------------------------------------
+  ' Création du cadre et du cartouche
+  '-------------------------------------------------------------------------------
+  CATInit       ' Pour initialiser les variables publiques & travailler dans la vue "background"
+  If CATCheckLink = False then
+    InitialView.Activate
+    Exit Sub
+  End If
+  If CATCheckRef(1) Then 
+    InitialView.Activate
+    Exit Sub           ' si un cartouche existe déjà il sera remis a jour
+  End If
+
+
+  CATStandard   ' Pour calculer les valeurs standard
+
+  CATReference  ' Pour placer sur le dessin un texte de reference
+
+  CATFrame      ' Pour dessiner un cadre
+
+  CATTitleBlock ' Pour dessiner le cartouche et le remplir
+End Sub
+
+Sub CATDrw_Delete()
+  '-------------------------------------------------------------------------------
+  ' Effacement du cartouche
+  '-------------------------------------------------------------------------------
+  CATInit
+  If CATCheckLink = False then
+    InitialView.Activate
+    Exit Sub
+  End If
+  If CATCheckRef(0) Then
+    InitialView.Activate
+    Exit Sub
+  End If
+  CATRemoveAll
+End Sub
+
+Sub CATDrw_Modify()
+  '-------------------------------------------------------------------------------
+  'How to create or modify a revison block
+  '-------------------------------------------------------------------------------
+  Dim X As double
+  Dim Y As double
+  CATInit
+  If CATCheckLink = False then
+    InitialView.Activate
+    Exit Sub
+  End If
+  If CATCheckRef(0) Then
+    InitialView.Activate
+    Exit Sub
+  End If
+  revision = CATCheckRev
+  On Error Resume Next
+   DrwTexts.GetItem("TitleBlock_Text_MDate_" + Chr(65 + revision)).Text = Date
+   If Err.Number <> 0 Then
+     Err.Clear
+   End If
+  On Error Goto 0
+  CATStandard                  ' Pour calculer les valeurs standard
+  revision = CATCheckRev
+  Description = InputBox( Message_8)',Message_9, Message_10)
+  if Description = "" or Description = Message_10 then
+        exit sub
+  end if
+  CATRevisionBlock
+  CATRevisionBlockText(Description) 
+End Sub
+
+Sub ReDimension()
+  '-------------------------------------------------------------------------------
+  ' Redimensionnement du cadre
+  '-------------------------------------------------------------------------------
+  CATInit
+  If CATCheckLink = False then
+    InitialView.Activate
+    Exit Sub
+  End If
+
+  If CATCheckRef(0) Then
+    InitialView.Activate
+    Exit Sub
+  End If
+  CATStandard
+  CATMoveReference
+  If TranslationX <> 0 Or TranslationY <> 0 Then
+    CATRemoveStandard
+    CATMoveTitleBlock
+    CATRemoveFrame
+    CATFrame
+    CATTitleBlockFrame
+    CATTitleBlockStandard
+    rev = CATCheckRev
+    For i = 0 To rev-1
+      revision = i 
+      CATRevisionBlock
+    Next 
+  End If
+  CATLinks
+End Sub
+
+Sub CATInit()
+  '-------------------------------------------------------------------------------
+  ' Initialisation du dialogue et creation des objets principaux
+  '-------------------------------------------------------------------------------
+  Set documents1  = CATIA.Documents
+  Set DrwDocument = CATIA.ActiveDocument
+  Set DrwSheets   = DrwDocument.Sheets
+  Set Selection   = DrwDocument.Selection
+  Set DrwSheet    = DrwSheets.ActiveSheet
+  Set InitialView = DrwSheet.Views.ActiveView
+  Set DrwView     = DrwSheet.Views.Item(2)
+  DrwView.Activate
+  Set Parameters1 = DrwDocument.Parameters
+  Set DrwTexts    = DrwView.Texts
+  Set Fact        = DrwView.Factory2D
+  Set GeomElems   = DrwView.GeometricElements
+  Set Tableaux    = DrwView.Tables
+End Sub
+
+Sub CATStandard()
+  '-------------------------------------------------------------------------------
+  'How to compute standard values
+  '-------------------------------------------------------------------------------
+  Hauteur      = DrwSheet.GetPaperHeight
+  Largeur      = DrwSheet.GetPaperWidth
+  sheetFormat  = DrwSheet.PaperSize
+
+  Marge = 10  'Marge par defaut de 10.
+  If (sheetFormat = CatPaperA0 Or sheetFormat = CatPaperA1 Or sheetFormat = CatPaperUser And _
+      (DrwSheet.GetPaperWidth > 594 Or DrwSheet.GetPaperHeight > 594)) Then
+    Marge = 10
+  End If
+
+  OH = Largeur - Marge
+  OV = Marge
+
+  documentStd = DrwDocument.Standard
+  If (documentStd = catISO) Then
+    If sheetFormat = 13 Then
+      displayFormat = "USER"
+    Else
+      displayFormat = "A" + CStr(sheetFormat - 2)
+    End If
+  Else
+    Select Case sheetFormat
+      Case 0
+        displayFormat = "Letter"
+      Case 1
+        displayFormat = "Legal"
+      Case 7 
+        displayFormat = "A"
+      Case 8 
+        displayFormat = "B"
+      Case 9 
+        displayFormat = "C"
+      Case 10 
+        displayFormat = "D"
+      Case 11 
+        displayFormat = "E"
+      Case 12 
+        displayFormat = "F"
+      Case 13 
+        displayFormat = "J"
+    End Select 
+  End If
+End Sub
+
+
+Sub CATReference()
+  '-------------------------------------------------------------------------------
+  'How to create a reference text (en haut à droite)
+  '-------------------------------------------------------------------------------
+  Set Text = DrwTexts.Add("", Largeur - Marge, Hauteur - Marge)
+  Text.Name = "Reference_" + MacroID
+End Sub
+
+
+Function GetDrawingParameter(ParameterName As String, Value as String, ParamCollection as Parameters) As Parameter
+'Dim TempParam as Parameter
+
+On Error Resume Next
+	Set TempParam = ParamCollection.Item(ParameterName)
+	If TempParam is Nothing then
+		Set   GetDrawingParameter   = ParamCollection.CreateString(ParameterName,Value)
+	Else
+		Set GetDrawingParameter  = TempParam
+	End If
+
+On error Goto 0
+End Function 
+
+
+Function CATCheckRef(Mode As Integer) As Integer
+  '-------------------------------------------------------------------------------
+  'How to check that the called macro is the right one
+  '-------------------------------------------------------------------------------
+  nbTexts = DrwTexts.Count
+  i = 0
+  notFound = 0
+  While (notFound = 0 And i<nbTexts)
+    i = i + 1    
+    Set Text = DrwTexts.Item(i)
+    WholeName = Text.Name
+    leftText = Left(WholeName, 10)
+    If (leftText = "Reference_") Then
+      notFound = 1
+      refText = "Reference_" + MacroID
+      If (Mode = 1) Then 
+        MsgBox Message_1
+        CATCheckRef = 1
+        ReDimension
+        Exit Function
+      ElseIf (Text.Name <> refText) Then
+        MsgBox Message_2 + Chr(10) + "        " + MacroID
+        CATCheckRef = 1
+        Exit Function
+      End If
+    End If
+  Wend
+  CATCheckRef = 0
+End Function
+
+Function CATCheckLink() As Boolean
+  '-------------------------------------------------------------------------------
+  ' Verif de l'existence d'une vue et d'un lien enregistré
+  '-------------------------------------------------------------------------------
+
+  CATCheckLink = True
+  On Error Resume Next
+    Err.Clear
+    If DrwSheet.Views.Count < 3 Then
+	MsgBox(Message_3)
+      CATCheckLink = False
+      Exit Function
+    End If
+    Set ProductDrawn = DrwSheet.Views.Item(3).GenerativeBehavior.Document
+
+    If Err.Number <> 0 Then
+      MsgBox(Message_4)
+	CATCheckLink = False
+      Exit Function
+  '  Else
+  '-------------------------------------------------------------------------------------------------------------------
+  ' Si un lien existe avec un document 3D, on vérifie si ce fichier est bien sauvegardé dans le work de SmarTeam
+ ' If a link exists with a document 3D, they prove if this file is safeguarded well in the work of SmarTeam
+  '-------------------------------------------------------------------------------------------------------------------
+
+ '  If ProductDrawn.Parent.Saved = False Then
+ '       Reponse = MsgBox(Message_5 , vbCritical, Message_7)
+ '       CATCheckLink = False
+ '       Exit Function
+ '     End If
+    End If
+  On Error Goto 0
+End Function
+
+Function Cmoy(i1 As Integer,i2 As Integer) As Double
+' Cette fonction calcule la position moyenne entre 2 colonnes simplement à partir du numéro des colonnes
+' This function calculates medium position between 2 columns simply from the number of columns
+  Cmoy = (2*OH +col(i1) + col(i2) )/2
+End Function
+
+
+Function Lmoy(j1 As Integer,j2 As Integer) As Double
+' Cette fonction calcule la position moyenne entre 2 lignes simplement à partir du numéro des lignes
+' This function calculates medium position between 2 lines simply from the number of lines
+  Lmoy = (2*OV + row(j1) + row(j2) )/2
+End Function
+
+
+Function CATCheckRev() As Integer
+  '-------------------------------------------------------------------------------
+  'How to check that a revision block alredy exists
+  '-------------------------------------------------------------------------------
+  CATCheckRev = 0
+  nbTexts = DrwTexts.Count
+  i = 0
+  While (i<nbTexts)
+    current = 0
+    i = i + 1
+    Set Text = DrwTexts.Item(i)
+    WholeName = Text.Name
+    leftText = Left(WholeName, 23)
+    If (leftText = "RevisionBlock_Text_Rev_") Then 
+      CATCheckRev = CATCheckRev + 1
+    End If
+  Wend
+
+End Function
+
+
+Sub CATTitleBlock()
+  '-------------------------------------------------------------------------------
+  'How to create the TitleBlock
+  '-------------------------------------------------------------------------------
+  CATTitleBlockFrame    ' Dessin des traits
+
+
+  CATTitleBlockStandard ' Representation de la norme de projection
+
+
+  CATTitleBlockText     ' Creation des textes
+
+End Sub
+
+Sub CATTitleBlockFrame()   
+  '-------------------------------------------------------------------------------
+  ' Dessin des traits du cartouches
+  '-------------------------------------------------------------------------------
+  Col(1) = -180
+  Col(2)=-172
+  Col(3) = -156
+  Col(4) = -142
+  Col(5) = - 134
+  Col(6) = - 118
+  col(7)=-125
+  Col(8) = - 104
+  Col(9) = - 85
+ Col(10)=-47.5
+  Col(11) = - 30
+  Col(12)=-10
+
+  Row(1) = +  6.2
+  Row(2) = + 12.4
+  Row(3) = + 18.6
+  Row(4) = + 24.8
+  Row(5) = + 31
+  Row(6) = + 37.2
+  Row(7) = + 43.4
+  Row(8)=+46.6
+  Row(9)=+56
+
+  On Error Resume Next
+   Set Ligne      = Fact.CreateLine(OH + Col(1), OV         , OH         , OV         )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Bottom"
+   Set Ligne      = Fact.CreateLine(OH + Col(1), OV         , OH + Col(1), OV + Row(9))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Left"
+   Set Ligne      = Fact.CreateLine(OH + Col(1), OV + Row(9), OH         , OV + Row(9))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Top"
+   Set Ligne      = Fact.CreateLine(OH         , OV + Row(9), OH         , OV         )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Right"
+
+
+   Set Ligne      = Fact.CreateLine(OH+col(1), OV + Row(1),OH+ Col(9)        , OV + Row(1))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Row_1a"
+
+   Set Ligne      = Fact.CreateLine(OH+col(12), OV + Row(1),OH        , OV + Row(1))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Row_1b"
+
+    Set Ligne      = Fact.CreateLine(OH+col(1), OV + Row(2),OH+ Col(9)        , OV + Row(2))
+    Ligne.Name     = "Frame_TitleBlock_Ligne_Row_2a"
+
+    Set Ligne      = Fact.CreateLine(OH+col(12), OV + Row(2),OH        , OV + Row(2))
+    Ligne.Name     = "Frame_TitleBlock_Ligne_Row_2b"
+
+    Set Ligne      = Fact.CreateLine(OH+ Col(1), OV + Row(3),OH       , OV + Row(3))
+    Ligne.Name     = "Frame_TitleBlock_Ligne_Row_3"
+
+    Set Ligne      = Fact.CreateLine(OH+col(1), OV + Row(4),OH        , OV + Row(4))
+    Ligne.Name     = "Frame_TitleBlock_Ligne_Row_4"
+
+    Set Ligne      = Fact.CreateLine(OH+col(1), OV + Row(5),OH+ Col(9)        , OV + Row(5))
+    Ligne.Name     = "Frame_TitleBlock_Ligne_Row_5a"
+
+    Set Ligne      = Fact.CreateLine(OH+col(12), OV + Row(5),OH        , OV + Row(5))
+    Ligne.Name     = "Frame_TitleBlock_Ligne_Row_5b"
+
+    Set Ligne      = Fact.CreateLine(OH+col(1), OV + Row(6),OH        , OV + Row(6))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Row_6"
+
+   Set Ligne      = Fact.CreateLine(OH+col(1), OV + Row(7),OH+ Col(7)        , OV + Row(7))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Row_7"
+
+   Set Ligne      = Fact.CreateLine(OH+col(7), OV + Row(8),OH+ Col(9)        , OV + Row(8))
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Row_8"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(2), OV + Row(5), OH + Col(2), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_1"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(3), OV + Row(5), OH + Col(3), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_2"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(4), OV + Row(5), OH + Col(4), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_3"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(5), OV + Row(5), OH + Col(5), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_4"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(6), OV + Row(5), OH + Col(6), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_5"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(7), OV + Row(6), OH + Col(7), OV+Row(9) )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_6"
+
+
+   Set Ligne      = Fact.CreateLine(OH + Col(8), OV + Row(6), OH + Col(8), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_7"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(9), OV + Row(9), OH + Col(9), OV )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_8"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(10), OV + Row(4), OH + Col(10), OV + Row(3) )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_8"
+
+
+   Set Ligne      = Fact.CreateLine(OH + Col(11), OV + Row(4), OH + Col(11), OV+Row(6) )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_9"
+
+   Set Ligne      = Fact.CreateLine(OH + Col(12), OV , OH + Col(12), OV+Row(6) )
+   Ligne.Name     = "Frame_TitleBlock_Ligne_Column_11"
+
+    Set Ligne      = Fact.CreateLine(OH + Col(1), OV + Row(9) + 5, OH         , OV + Row(9) + 5)' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Ligne_1"
+    
+    Set Ligne      = Fact.CreateLine(OH + Col(1), OV + Row(9) + 10, OH         , OV + Row(9) + 10)' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Ligne_2"
+
+    Set Ligne      = Fact.CreateLine(OH + Col(1), OV + Row(9) + 15, OH         , OV + Row(9) + 15)' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Ligne_3"
+
+   
+    Set Ligne      = Fact.CreateLine(OH + Col(1), OV + Row(9) + 20, OH         , OV + Row(9) + 20)' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Ligne_4"
+
+    Set Ligne      = Fact.CreateLine(OH + Col(1), OV + Row(9), OH + Col(1), OV + Row(9) + 20 )' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Col_Ligne_1"
+
+    Set Ligne      = Fact.CreateLine(OH + Col(1) + 10, OV + Row(9), OH + Col(1) + 10, OV + Row(9) + 20 )' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Col_Ligne_2"
+
+    Set Ligne      = Fact.CreateLine(OH + Col(1) + 40, OV + Row(9), OH + Col(1) + 40, OV + Row(9) + 20 )' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Col_Ligne_3"
+
+    Set Ligne      = Fact.CreateLine(OH + Col(1) + 50, OV + Row(9), OH + Col(1) + 50, OV + Row(9) + 20 )' Added by Paul(20201022)
+   Ligne.Name     = "Frame_RevBlock_Col_Ligne_4"
+
+
+
+
+   If Err.Number <> 0 Then
+     Err.Clear
+   End If
+  On Error Goto 0
+
+End Sub
+
+
+Sub CATRevisionBlock()
+  '-------------------------------------------------------------------------------
+  'How to draw the revision block geometry
+  '-------------------------------------------------------------------------------
+  colRev(1) = -190
+  colRev(2) = -175
+  colRev(3) = -170
+  colRev(4) = -169
+  colRev(5) = -150
+
+  On Error Resume Next
+
+  If (revision = 0) Then
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge, OH + colRev(1), hauteur - marge - RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_1" 
+    Set Ligne = Fact.CreateLine(OH + colRev(2), hauteur - marge, OH + colRev(2), hauteur - marge - RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_2"
+    Set Ligne = Fact.CreateLine(OH + colRev(4), hauteur - marge, OH + colRev(4), hauteur - marge - RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_4"
+    Set Ligne = Fact.CreateLine(OH + colRev(5), hauteur - marge, OH + colRev(5), hauteur - marge - RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_5" 
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge - RevRowHauteur, OH + colRev(5), hauteur - marge - RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Ligne_1" 
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge - 2*RevRowHauteur, OH            , hauteur - marge - 2*RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Ligne_2" 
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge - RevRowHauteur, OH + colRev(1), hauteur - marge - 2*RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_1_ligne2" 
+    Set Ligne = Fact.CreateLine(OH + colRev(3), hauteur - marge - RevRowHauteur, OH + colRev(3), hauteur - marge - 2*RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_3" 
+    Set Ligne = Fact.CreateLine(OH + colRev(5), hauteur - marge - RevRowHauteur, OH + colRev(5), hauteur - marge - 2*RevRowHauteur)
+    Ligne.Name = "Frame_revisionBlock_Column_5_ligne2" 
+  Else
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge- (2*revision)*RevRowHauteur, OH + colRev(1), hauteur - marge - (2*revision+1)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Column_1_"+ Chr(65 + revision)) 
+    Set Ligne = Fact.CreateLine(OH + colRev(2), hauteur - marge- (2*revision)*RevRowHauteur, OH + colRev(2), hauteur - marge - (2*revision+1)*RevRowHauteur)
+    Ligne.Name =( "Frame_revisionBlock_Column_2_"+ Chr(65 + revision))
+    Set Ligne = Fact.CreateLine(OH + colRev(4), hauteur - marge- (2*revision)*RevRowHauteur, OH + colRev(4), hauteur - marge - (2*revision+1)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Column_4_"+ Chr(65 + revision))
+    Set Ligne = Fact.CreateLine(OH + colRev(5), hauteur - marge- (2*revision)*RevRowHauteur, OH + colRev(5), hauteur - marge - (2*revision+1)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Column_5_"+ Chr(65 + revision))
+ 
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge - (2*revision+1)*RevRowHauteur, OH + colRev(5), hauteur - marge -(2*revision+1)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Ligne_1_"+ Chr(65 + revision)) 
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge - (2*revision+2)*RevRowHauteur, OH           , hauteur - marge -(2*revision+2)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Ligne_2_"+ Chr(65 + revision)) 
+
+    Set Ligne = Fact.CreateLine(OH + colRev(1), hauteur - marge - (2*revision+1)*RevRowHauteur, OH + colRev(1), hauteur - marge - (2*revision+2)*RevRowHauteur)
+    Ligne.Name =("Frame_revisionBlock_Column_1_ligne2_"+ Chr(65 + rev)) 
+    Set Ligne = Fact.CreateLine(OH + colRev(3), hauteur - marge - (2*revision+1)*RevRowHauteur, OH + colRev(3), hauteur - marge - (2*revision+2)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Column_3_"+ Chr(65 + revision)) 
+    Set Ligne = Fact.CreateLine(OH + colRev(5), hauteur - marge - (2*revision+1)*RevRowHauteur, OH + colRev(5), hauteur - marge - (2*revision+2)*RevRowHauteur)
+    Ligne.Name = ("Frame_revisionBlock_Column_5_ligne2_"+ Chr(65 + revision)) 
+
+  End If
+  If Err.Number <> 0 Then
+    Err.Clear
+  End If
+  On Error Goto 0
+End Sub
+  
+Function CATRevisionBlockText(Description)
+
+  '-------------------------------------------------------------------------------
+  'How to fill in the revision block
+  '-------------------------------------------------------------------------------
+
+  User = CATIA.SystemService.Environ("LOGNAME")
+  If (User = "") Then
+    User = CATIA.SystemService.Environ("USERNAME")
+  End If
+
+  rev= catcheckrev
+
+  If (revision = 0) Then
+
+    Set TableauModif = Tableaux.Add( OH + colRev(5), hauteur - marge , 1, 1, 2*RevRowHauteur, -50 )
+    TableauModif.AnchorPoint = catTableTopLeft
+    TableauModif.SetCellBorderType 1, 1, CatTableNone
+    TableauModif.SetCellString 1, 1, Description
+    TableauModif.SetCellAlignment 1, 1, catTableMiddleCenter
+    TableauModif.Name = ("RevisionBlock_Text_description_"+ Chr(65)) 
+    TableauModif.SetColumnsize 1, 150
+    Set Text = TableauModif.GetCellObject(1, 1)
+    Text.SetFontSize 0, 0, 2.5
+'    Text.SetFontName 0, 0, "Arial (TrueType)"
+    Text.SetFontName 0, 0, "SimSun (TrueType)"
+  
+
+    Set Text = DrwTexts.Add(Text_23        , OH + .5*(colRev(1)+colRev(2)), hauteur - marge - .5*RevRowHauteur)
+    CATFormatTBText "RevisionBlock_Text_1"          , catMiddleCenter, 1.8
+    Set Text = DrwTexts.Add(Chr(65 + revision)        ,      OH + .5*(colRev(4)+colRev(2)), hauteur - marge - .5*RevRowHauteur)
+    CATFormatTBText "RevisionBlock_Text_Rev_1"          , catMiddleCenter, 1.8
+	'msgbox date
+    Set Text = DrwTexts.Add(date        ,      OH + .5*(colRev(4)+colRev(5)), hauteur - marge - .5*RevRowHauteur)
+   ' msgbox Text
+    CATFormatTBText "RevisionBlock_Text_date_1"          , catMiddleCenter, 1.8
+    Set Text = DrwTexts.Add(User        ,      OH + .5*(colRev(1)+colRev(3)), hauteur - marge - 1.5*RevRowHauteur)
+    CATFormatTBText "RevisionBlock_Text_user_1"          , catMiddleCenter, 1.8
+
+    Set Text = DrwTexts.Add(Text_24        ,      OH + .5*(colRev(3)+colRev(5)), hauteur - marge - 1.5*RevRowHauteur)
+'trial line by cpw on 080414
+'    Set Text = DrwTexts.Add(Text_24        ,      OH + .5*(colRev(4)+colRev(5)), hauteur - marge - 1.5*RevRowHauteur)
+    CATFormatTBText "RevisionBlock_Text_verif_1"          , catMiddleCenter, 0.8
+
+  else
+
+    Set TableauModif = Tableaux.Add(  OH + colRev(5) , hauteur - marge - (2*revision)*RevRowHauteur, 1, 1, 2*RevRowHauteur, -50 )
+    TableauModif.AnchorPoint = catTableTopLeft
+    TableauModif.SetCellBorderType 1, 1, CatTableNone
+    TableauModif.SetCellString 1, 1, Description
+    TableauModif.SetCellAlignment 1, 1, catTableMiddleCenter
+    TableauModif.Name = ("RevisionBlock_Text_description_"+ Chr(65 + rev)) 
+    TableauModif.SetColumnsize 1, 150
+    Hrev = TableauModif.GetRowSize(1)
+    TableauModif.SetRowSize 1, Hrev
+    Set Text = TableauModif.GetCellObject(1, 1)
+    Text.SetFontSize 0, 0, 2.5
+
+
+    Set Text = DrwTexts.Add(Text_23        , OH + .5*(colRev(1)+colRev(2)), hauteur - marge - (.5+2*revision)*RevRowHauteur )
+    CATFormatTBText ("RevisionBlock_Text_"+ Chr(65 + revision))         , catMiddleCenter, 1.8
+
+    Set Text = DrwTexts.Add(Chr(65 + rev)        ,      OH + .5*(colRev(4)+colRev(2)),hauteur - marge - (.5+2*revision)*RevRowHauteur )
+    CATFormatTBText ("RevisionBlock_Text_Rev_" +Chr(65 + revision))     , catMiddleCenter, 1.8
+	
+	'msgbox date
+
+    Set Text = DrwTexts.Add(date        ,      OH + .5*(colRev(4)+colRev(5)), hauteur - marge - (.5+2*revision)*RevRowHauteur )
+    CATFormatTBText ("RevisionBlock_Text_date_" +Chr(65 + revision))    , catMiddleCenter, 1.8
+	'msgbox Text
+
+    Set Text = DrwTexts.Add(User        ,      OH + .5*(colRev(1)+colRev(3)), hauteur - marge - (1.5+2*revision)*RevRowHauteur )
+    CATFormatTBText ("RevisionBlock_Text_user_" + Chr(65 + rev))   , catMiddleCenter, 1.8
+
+
+    Set Text = DrwTexts.Add(Text_24        ,      OH + .5*(colRev(3)+colRev(5)), hauteur - marge - (1.5+2*revision)*RevRowHauteur )
+'trial line by cpw on 080414
+'    Set Text = DrwTexts.Add(Text_24        ,      OH + .5*(colRev(4)+colRev(5)), hauteur - marge - (1.5+2*revision)*RevRowHauteur )
+    CATFormatTBText ("RevisionBlock_Text_verif_" + Chr(65 + revision))   , catMiddleCenter, 0.8
+
+  End If
+
+
+  If Err.Number <> 0 Then
+    Err.Clear
+  End If
+  On Error Goto 0
+End Function
+
+
+Sub CATTitleBlockText()
+  '-------------------------------------------------------------------------------
+  ' remplissage du cartouche
+  '-------------------------------------------------------------------------------
+ Dim parameter2 As Parameter   
+
+dim product_name  as string
+
+
+product_name = ProductDrawn.PartNumber
+
+
+  Text_15 = text_drawer
+
+'---------------------------------------- 审核
+ Set Text     = DrwTexts.Add( "Approval", OH + (Col(1)+Col(2))/2  , OV + Row(1)/2 )  
+CATFormatTBText "TitleBlock_Check"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Parameter2 = GetDrawingParameter ("approver", Text_approver, Parameters1)
+Set Text     = DrwTexts.Add( text_102 , OH + (Col(3)+Col(2))/2, OV + Row(1)/2  )  
+ CATFormatTBText "TitleBlock_Check_text"  , catMiddleCenter, 2.0
+Text.InsertVariable 0, 100, Parameter2  
+ Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( date_format , OH + (Col(3)+Col(4))/2, OV + Row(1)/2  )   
+CATFormatTBText "TitleBlock_Check_date"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 校对
+ Set Text     = DrwTexts.Add( "Revision", OH + (Col(1)+Col(2))/2  , OV + (Row(1)+Row(2))/2 )  
+CATFormatTBText "TitleBlock_ProofRead"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Parameter2 = GetDrawingParameter ("proofreader", Text_proofreader, Parameters1)
+ Set Text     = DrwTexts.Add( text_102 , OH +(col(2)+col(3))/2, OV + (Row(1)+row(2))/2  )  
+CATFormatTBText "TitleBlock_ProofRead_text"  , catMiddleCenter, 2.0
+Text.InsertVariable 0, 100, Parameter2  
+Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+	
+
+
+ Set Text     = DrwTexts.Add( date_format , OH +(col(4)+col(3))/2, OV + (Row(1)+row(2))/2  )  
+CATFormatTBText "TitleBlock_ProofRead_date"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+  
+
+
+
+'---------------------------------------- 比例
+ Set Text     = DrwTexts.Add( "Ratio", OH + (Col(8)+Col(9))/2  , OV + (Row(1)+Row(2))/2 )  
+CATFormatTBText "TitleBlock_Scale"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'取比例值
+
+
+Set Text     = DrwTexts.Add(Text_03,OH +(col(8)+col(9))/2, OV + Row(1)/2)                
+  CATFormatTBText "TitleBlock_Text_Scale_1"     , catMiddleCenter, 2.0
+	Set Parameter2 = GetDrawingParameter (Text_41,Text_25, Parameters1)
+  Text.InsertVariable 0, 100, Parameter2
+   Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 页码
+ Set Text     = DrwTexts.Add( "Page", OH + Col(12)/2  , OV + (Row(1)+Row(2))/2 )  
+CATFormatTBText "TitleBlock_PageNumber"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_05, OH + Col(12)/2 , OV + .5*(Row(1))                   )
+  CATFormatTBText "TitleBlock_Text_Sheet_1"     , catMiddleCenter, 2.0
+Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 绘图
+ Set Text     = DrwTexts.Add( "Drawing", OH + (Col(1)+Col(2))/2  , OV + (Row(3)+Row(2))/2 )  
+CATFormatTBText "TitleBlock_Drawing"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+ 'Set Text     = DrwTexts.Add( text_102 , OH +(col(2)+col(3))/2, OV + (Row(3)+row(2))/2  )  
+'CATFormatTBText "TitleBlock_Drawing_text"  , catMiddleCenter, 2.0
+ ' Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'取当前用户名
+
+Set Parameter2 = GetDrawingParameter (Text_48, Text_15, Parameters1)  
+  Set Text     = DrwTexts.Add(Text_15,OH +(col(2)+col(3))/2, OV + (Row(3)+row(2))/2            )
+  CATFormatTBText "TitleBlock_Drawing_text"  , catMiddleCenter, 2.0
+  Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+'取当前日期
+DateTemp = Left(Date,Len(Date))
+DateTemp =replace(DateTemp,"-","/")
+
+DateTemp=right(DateTemp,len(DateTemp))
+  Set Text     = DrwTexts.Add(DateTemp , OH +(col(4)+col(3))/2, OV + (Row(3)+row(2))/2            )
+  CATFormatTBText "TitleBlock_Text_CDate_1"     , catMiddleCenter, 1.5
+ 
+ ' Text.InsertVariable 0, 100,DateTemp
+Text.SetFontName      0, 0, "Arial (TrueType)"
+
+'---------------------------------------- 批准
+ Set Text     = DrwTexts.Add( "Approval", OH + (Col(4)+Col(5))/2  , OV + (Row(3)+Row(2))/2 )  
+CATFormatTBText "TitleBlock_Approved"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+ Set Text     = DrwTexts.Add( text_102 , OH +(col(6)+col(5))/2, OV + (Row(3)+row(2))/2  )  
+CATFormatTBText "TitleBlock_Approved_text"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( date_format , OH +(col(6)+col(8))/2, OV + (Row(3)+row(2))/2  )  
+CATFormatTBText "TitleBlock_Approved_date"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 设计
+
+ Set Text     = DrwTexts.Add( "Design", OH + (Col(1)+Col(2))/2  , OV + (Row(3)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_Designed"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+Set Parameter2 = GetDrawingParameter ("desinger",text_designer, Parameters1)  
+ Set Text     = DrwTexts.Add( text_designer , OH +(col(2)+col(3))/2, OV + (Row(3)+row(4))/2    )  
+CATFormatTBText "TitleBlock_Text_Designer_1"  , catMiddleCenter, 2.0
+Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'取当前日期
+
+DateTemp = Left(Date,Len(Date))
+DateTemp =replace(DateTemp,"-","/")
+
+DateTemp=right(DateTemp,len(DateTemp))
+  Set Text     = DrwTexts.Add(DateTemp ,  OH +(col(4)+col(3))/2, OV + (Row(3)+row(4))/2          )
+  CATFormatTBText "TitleBlock_Text_CDate_1"     , catMiddleCenter, 1.5
+ 
+ ' Text.InsertVariable 0, 100,DateTemp
+Text.SetFontName      0, 0, "Arial (TrueType)"
+
+'---------------------------------------- 工艺
+ Set Text     = DrwTexts.Add( "Process", OH + (Col(4)+Col(5))/2  , OV + (Row(3)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_Craft"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( text_102 , OH +(col(5)+col(6))/2, OV + (Row(3)+row(4))/2  )  
+CATFormatTBText "TitleBlock_Craft_text"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( date_format , OH +(col(6)+col(8))/2, OV + (Row(3)+row(4))/2  )  
+CATFormatTBText "TitleBlock_Craft_date"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 重量
+ Set Text     = DrwTexts.Add( "Mass(kg)", OH + (Col(8)+Col(9))/2  , OV + (Row(3)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_Weight"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+	Set Parameter2 = GetDrawingParameter (Text_42, Text_24, Parameters1)
+  Set Text     = DrwTexts.Add(Text_42,   OH + (Col(8)+Col(9))/2  , OV + (Row(3)+Row(2))/2 )
+  CATFormatTBText "TitleBlock_Text_Weight_1"    , catMiddleCenter, 3.0
+  Text.InsertVariable 0, 100, Parameter2
+ Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 图幅
+ Set Text     = DrwTexts.Add( "Size", Col(12)/2+OH  , OV + (Row(4)+Row(3))/2  )  
+CATFormatTBText "TitleBlock_foamat"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+
+	Set Parameter2 = GetDrawingParameter (Text_44, DisplayFormat, Parameters1)
+  Set Text     = DrwTexts.Add( Text_24,  OH + col(12)/2  , OV + (Row(3)+Row(2))/2 )
+  CATFormatTBText "TitleBlock_Text_Format_1"    , catMiddleCenter, 3.0
+  Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+
+'---------------------------------------- 签名、日期
+ Set Text     = DrwTexts.Add( "Sign", OH + (Col(3)+Col(2))/2  , OV + (Row(5)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_signature"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( "Date", OH + (Col(3)+Col(4))/2  , OV + (Row(5)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_date"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( "Sign", OH + (Col(5)+Col(6))/2  , OV + (Row(5)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_signature1"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+ Set Text     = DrwTexts.Add( "Date", OH + (Col(6)+Col(8))/2  , OV + (Row(5)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_date1"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 数量
+ Set Text     = DrwTexts.Add( "Qty", OH + (Col(8)+Col(9))/2  , OV + (Row(5)+Row(6))/2 )  
+CATFormatTBText "TitleBlock_Quantity"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+
+
+'---------------------------------------- 树上层
+ Set Text     = DrwTexts.Add( "Tree：", OH + (Col(1)+Col(2))/2+2.8  , OV + (Row(5)+Row(6))/2 )  
+CATFormatTBText "TitleBlock_ParentLevel"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+	Set Parameter2 = GetDrawingParameter (Text_112,"树上层" , Parameters1)  
+  Set Text     = DrwTexts.Add(text_102, OH + Col(3)+5  , OV + (Row(5)+Row(6))/2 )
+CATFormatTBText "TitleBlock_ParentLevel_Text"    , catMiddleCenter, 2.0
+Text.InsertVariable 0, 100, Parameter2
+ Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"  
+  
+'---------------------------------------- 工号
+ Set Text     = DrwTexts.Add( "No：", OH + Col(1)+5.3  , OV + (Row(7)+Row(6))/2 )  
+CATFormatTBText "TitleBlock_JobNumber"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Parameter2 = GetDrawingParameter (Text_111, text_jobnumber, Parameters1)
+  Set Text     = DrwTexts.Add( text_jobnumber,   OH + (Col(1)+col(7))/2 , OV + (Row(6)+Row(7))/2 )
+  CATFormatTBText "TitleBlock_JobNumber_text"    , catMiddleCenter, 2.0
+Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 产品/工程名称
+ Set Text     = DrwTexts.Add( "Project：", OH + Col(1)+11.5  , OV +(Row(9)+row(7))/2+3)  
+CATFormatTBText "TitleBlock_ProjectName"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Parameter2 = GetDrawingParameter (text_110, text_productname, Parameters1)
+ Set Text     = DrwTexts.Add( text_productname, OH + (Col(1)+col(7))/2  , OV +(Row(9)+row(7))/2-3)  
+CATFormatTBText "TitleBlock_ProjectName_text"  , catMiddleCenter, 2.0
+Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 材料
+ Set Text     = DrwTexts.Add( "Material：", OH + Col(7)+5 , OV +(Row(9)+row(7))/2+3)  
+CATFormatTBText "TitleBlock_Material"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+
+	Set Parameter2 = GetDrawingParameter ( Text_43, Text_24, Parameters1)
+
+  Set Text     = DrwTexts.Add( Text_24,  OH + (Col(9)+col(7))/2  , OV +(Row(9)+row(8))/2-3 )
+  CATFormatTBText "TitleBlock_Text_Matiere_1"    , catMiddleCenter, 2.0
+  Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 规格
+ Set Text     = DrwTexts.Add( "Spec：", OH + Col(7)+5 , OV +(Row(8)+row(6))/2+1)  
+CATFormatTBText "TitleBlock_scale"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+	Set Parameter2 = GetDrawingParameter (Text_113, Text_24, Parameters1)
+
+  Set Text     = DrwTexts.Add(Text_113,  OH + (Col(9)+col(7))/2  , OV +(Row(6)+row(8))/2-3 )
+  CATFormatTBText "TitleBlock_Text_scale_1"    , catMiddleCenter, 2.0
+	Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+
+
+ 
+
+'---------------------------------------- 公司名
+  Set Text     = DrwTexts.Add(Text_11, OH + (Col(11)+Col(9))/2, OV -1+ .50*(Row(5)+Row(6)))
+  CATFormatLOGOText "TitleBlock_Text_Company"     , catMiddleCenter, 6
+  Text.SetFontName      0, 0, "Arial Black (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_11Z, OH + .50*(Col(11)+Col(9)), OV + .50*(Row(4)+Row(5)))
+  CATFormatLOGOText "TitleBlock_Text_CompanyChinese"     , catMiddleCenter, 2
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+'---------------------------------------- 版本
+ Set Text     = DrwTexts.Add( "Ver", Col(12)/2+OH  , OV + (Row(5)+Row(6))/2  )  
+CATFormatTBText "TitleBlock_foamat"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Parameter2 = GetDrawingParameter (Text_52, Text_03, Parameters1)  
+Set Text     = DrwTexts.Add(Text_52,Col(12)/2+OH  , OV + (Row(5)+Row(4))/2  )  
+  CATFormatTBText "TitleBlock_Text_Indice_1"  , catMiddleCenter, 4
+  Text.InsertVariable 0, 100, Parameter2
+  Text.SetFontName      0, 0, "Arial (TrueType)"
+
+
+' --------------------------------------------------------------------------------------------------------- 版权声明
+  Set Text     = DrwTexts.Add(Text_17, Col(11)+OH-12 , OV + .51*(Row(7)+Row(9))            )
+  CATFormatTBText "TitleBlock_Text_Rights1"      , catMiddleCenter ,   1.6
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_18,Col(11)+OH-12 , OV + .48*(Row(7)+Row(9))            )
+  CATFormatTBText "TitleBlock_Text_Rights2"      , catMiddleCenter ,   1.6
+  Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_19,Col(11)+OH-12 , OV + .45*(Row(7)+Row(9))            )
+  CATFormatTBText "TitleBlock_Text_Rights3"      , catMiddleCenter ,   1.6
+ Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_20,Col(11)+OH-12 , OV + .42*(Row(7)+Row(9))            )
+  CATFormatTBText "TitleBlock_Text_Rights4"      , catMiddleCenter ,   1.6
+ Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"
+
+'----------------------------------------图纸ST 编号 
+ Set Text     = DrwTexts.Add( "Drw ST No：", OH + col(9)+11 , OV + (Row(3)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_DrawingStno"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_103,   OH + (Col(10)+Col(9))/2+7  , OV + (Row(3)+Row(4))/2 )
+  CATFormatTBText "TitleBlock_DrawingStno_text"    , catMiddleCenter, 1.6
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'----------------------------------------模型ST 编号 
+ Set Text     = DrwTexts.Add( "Model ST No：", OH + (Col(10)+Col(11))/2+3, OV + (Row(3)+Row(4))/2 )  
+CATFormatTBText "TitleBlock_ModelStno"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+  Set Text     = DrwTexts.Add(Text_103,   OH + (Col(10)+Col(11))/2+18  , OV + (Row(3)+Row(4))/2 )
+  CATFormatTBText "TitleBlock_ModelStno_text"    , catMiddleCenter,1.6
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+'---------------------------------------- 图号&名称
+Set Text     = DrwTexts.Add( "DrwNo：", OH + col(9)+9.4 , OV +(Row(2)+Row(3))/2 )  
+CATFormatTBText "TitleBlock_ParentLevel"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+	
+    Set Parameter2 = GetDrawingParameter (Text_46,Text_27 , Parameters1)  
+
+ Set Text     = DrwTexts.Add( Text_46, OH + (Col(8)+Col(12))/2  ,OV +(Row(1)+Row(2))/2 )
+ CATFormatTBText "TitleBlock_Text_Designation_1"    , catMiddleCenter, 3.0
+   Text.InsertVariable 0, 100, Parameter2
+Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"  
+
+    Set Parameter2 = GetDrawingParameter (Text_114, Text_27 , Parameters1)  
+
+' Set Text     = DrwTexts.Add( Text_114, OH + (Col(8)+Col(12))/2  ,(OV +(Row(1)+Row(2))/2)-5 )
+' CATFormatTBText "TitleBlock_Text_Designation_2"    , catMiddleCenter, 3.0
+'   Text.InsertVariable 0, 100, Parameter2
+'Text.SetFontName      0, 0, "Arial Unicode MS (TrueType)"  
+
+
+'---------------------------------------- Rev 'Added by Paul(20201022)
+Set Text     = DrwTexts.Add( "No", OH + Col(1) + 5, OV + Row(9) + 2 )  
+CATFormatTBText "TitleBlock_rev_no"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Text     = DrwTexts.Add( "Date", OH + Col(1) + 25, OV + Row(9) + 2 )  
+CATFormatTBText "TitleBlock_rev_date"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+ 
+Set Text     = DrwTexts.Add( "Ver", OH + Col(1) + 45, OV + Row(9) + 2 )  
+CATFormatTBText "TitleBlock_rev_ver"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+  
+Set Text     = DrwTexts.Add( "Remark", OH + Col(1) + 110, OV + Row(9) + 2 )  
+CATFormatTBText "TitleBlock_rev_desp"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Text     = DrwTexts.Add( "1", OH + Col(1) + 5, OV + Row(9) + 7 )  
+CATFormatTBText "TitleBlock_rev_no1"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'Set Text     = DrwTexts.Add( "2", OH + Col(1) + 5, OV + Row(9) + 12 )  
+'CATFormatTBText "TitleBlock_rev_no1"  , catMiddleCenter, 2.0
+'  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Text     = DrwTexts.Add( DateTemp, OH + Col(1) + 25, OV + Row(9) + 7 )  
+CATFormatTBText "TitleBlock_rev_date1"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'  Set Text     = DrwTexts.Add( DateTemp, OH + Col(1) + 25, OV + Row(9) + 12 )  
+'CATFormatTBText "TitleBlock_rev_date1"  , catMiddleCenter, 2.0
+'  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+ 
+Set Text     = DrwTexts.Add( "A", OH + Col(1) + 45, OV + Row(9) + 7 )  
+CATFormatTBText "TitleBlock_rev_ver1"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'Set Text     = DrwTexts.Add( "B", OH + Col(1) + 45, OV + Row(9) + 12 )  
+'CATFormatTBText "TitleBlock_rev_ver1"  , catMiddleCenter, 2.0
+'  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+Set Text     = DrwTexts.Add( "Draft", OH + Col(1) + 110, OV + Row(9) + 7 )  
+CATFormatTBText "TitleBlock_rev_desp1"  , catMiddleCenter, 2.0
+  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'Set Text     = DrwTexts.Add( "As-fitted", OH + Col(1) + 110, OV + Row(9) + 12 )  
+'CATFormatTBText "TitleBlock_rev_desp1"  , catMiddleCenter, 2.0
+'  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+'---------------------------------------- 技术要求 'Added by Paul(20220210)
+'Set Text     = DrwTexts.Add( "Tech' Sepc'", 200 , 30 )  
+'CATFormatTBText "TitleBlock_ParentLevel"  , catMiddleCenter, 3.0
+'  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+'Set Text     = DrwTexts.Add( "1、Unless otherwise specified, tolerance shall be ±0.1mm;", 200 , 25 )  
+'CATFormatTBText "TitleBlock_ParentLevel"  , catMiddleCenter, 3.0
+'  Text.SetFontName      0,0,"Arial Unicode MS (TrueType)"
+
+
+CATLinks
+
+End Sub
+
+
+Sub CATLinks()
+  If CATCheckLink = False then exit sub
+
+  '-------------------------------------------------------------------------------
+  ' Affichage du nombre de feuille
+  '-------------------------------------------------------------------------------
+  Dim nbSheet  As Integer
+  Dim curSheet As Integer
+  nbSheet  = 0
+  curSheet = 0
+
+  If (not DrwSheet.IsDetail) Then
+    For i = 1 To DrwSheets.Count
+      If (not DrwSheets.Item(i).IsDetail) Then
+        nbSheet = nbSheet + 1
+      End If
+    Next
+    For i = 1 To DrwSheets.Count
+      If (not DrwSheets.Item(i).IsDetail) Then
+        On Error Resume Next
+        curSheet = curSheet + 1
+        DrwSheets.Item(i).Views.Item(2).Texts.GetItem("TitleBlock_Text_Sheet_1").Text = CStr(curSheet) & "/" & CStr(nbSheet)
+      End If
+    Next
+  End If
+ 
+  '-------------------------------------------------------------------------------
+  ' Mise a jour de l'echelle
+  '------------------------------------------------------------------------------- 
+  Dim Echelle As Double
+  Dim Denominateur As Integer
+  Set Parameter2 = Parameters1.GetItem(Text_41)
+  Echelle = DrwSheet.Views.Item(3).Scale
+Denominateur = 1
+  For N = 1 to 1000
+    If Echelle*N = Int(Echelle*N) Then
+      Denominateur = N
+      Exit For
+    End If
+  Next
+
+  Parameter2.Value = CStr(Echelle*Denominateur)& ":" & CStr(Denominateur)
+
+  If nbSheet >1 Then
+
+' Modified at 16 Jan 2008: Handle the display for scale is not correct
+    'DrwTexts.GetItem("TitleBlock_Text_Scale_1").Text = CStr(DrwSheet.Views.Item(3).Scale)
+   DrwTexts.GetItem("TitleBlock_Text_Scale_1").Text = CStr(Echelle*Denominateur)& ":" & CStr(Denominateur)
+
+  Else
+    Parameters1.Item(Text_41).Value = DrwTexts.GetItem("TitleBlock_Text_Scale_1").Text
+  End If   
+
+  '-------------------------------------------------------------------------------
+  ' Mise a jour de la matiere  (Material)
+  '-------------------------------------------------------------------------------
+  Dim Parameters3D As parameters
+  Dim parameter3D  As Parameter
+  Dim ProductAnalysis As Analyze
+' Modified at 16 Jan 2008: Handle Simplified Chinese Case
+  Set Parameters3D = ProductDrawn.Parameters
+  For each Parameter3D In Parameters3D
+    
+
+If InStr(Parameter3D.Name,"Material") > 0 or InStr(Parameter3D.Name,"材料") > 0 and Parameter3D.ValueAsSTring <> "NIL" And Parameter3D.ValueAsSTring <> "NIL" Then
+      Parameters1.Item(Text_43).value = Parameter3D.ValueAsString
+      Exit For
+    End If
+  Next
+
+  If Parameters1.Item(Text_43).ValueAsString = Text_24 or Parameters1.Item(Text_43).ValueAsString = "NIL" Then
+    Parameters1.Item(Text_43).value = "NIL"
+  End If
+
+  If (Right(ProductDrawn.Parent.Name, 4) = "duct") Then
+    Parameters1.Item(Text_43).value = "NIL"
+  Else
+
+  '-------------------------------------------------------------------------------
+  ' Mise a jour de la masse   Faire un TEST le paramètre est calculé et mis a jour si part, sinon il est libre (The mass display)
+  '-------------------------------------------------------------------------------  
+    Set ProductAnalysis = ProductDrawn.Analyze
+    DrwTexts.GetItem("TitleBlock_Text_Weight_1").Text = FormatNumber(ProductAnalysis.Mass,1)
+    Parameters1.Item(Text_42).Value = FormatNumber(ProductAnalysis.Mass,1)
+  End If
+
+  '-------------------------------------------------------------------------------
+  ' Mise a jour du titre
+  '-------------------------------------------------------------------------------
+  Dim position as Integer
+  position = 1
+
+  Dim product_name As String
+ dim revision as string
+  Dim tmpproduct_name As String
+dim Definition as String
+dim Part_name as String
+
+  product_name = ProductDrawn.PartNumber
+tmpproduct_name = ProductDrawn.PartNumber
+ revision=ProductDrawn.Revision    
+Definition=  ProductDrawn.Definition 
+ Part_name=  ProductDrawn.DescriptionRef 
+  dim h as integer
+
+
+  position = InStr(1, product_name, "-")
+If product_name <> Text_09 then
+	If Parameters1.Item(Text_46).value = Text_27 And Parameters1.Item(Text_47).value = Text_28  then
+
+		if position > 0 and position < len(product_name) then
+			position = InStr(position + 1, product_name, "-")
+'			position = InStr(position + 1, product_name, "-")
+		end if
+    
+		if position > 0 and position < len(product_name) then
+    		Parameters1.Item(Text_47).value = Mid(product_name , 1, position - 1)
+    		Parameters1.Item(Text_46).value =tmpproduct_name' Mid(product_name , position + 1, len(product_name) - position)
+            
+else
+    		Parameters1.Item(Text_47).value = tmpproduct_name
+    		Parameters1.Item(Text_46).value = tmpproduct_name
+            
+		end if
+	End If
+ End If
+
+	
+    		
+Parameters1.Item(Text_52).value = "A"
+Parameters1.Item(Text_113).value = Definition
+Parameters1.Item(Text_114).value = Part_name
+Set ProductAnalysis = ProductDrawn.Analyze
+DrwTexts.GetItem("TitleBlock_Text_Weight_1").Text = FormatNumber(ProductAnalysis.Mass,1)
+Parameters1.Item(Text_42).Value =FormatNumber(ProductAnalysis.Mass,1)
+
+End Sub
+
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+
+Sub CATFillField(string1 As String, string2 As String, string3 As String)
+  '-------------------------------------------------------------------------------
+  ' Remplissage d'un texte donné
+  '-------------------------------------------------------------------------------
+  Dim TextToFill_1 As DrawingText
+  Dim TextToFill_2 As DrawingText
+  Dim Person As String
+
+  Set TextToFill_1 = DrwTexts.GetItem(string1)
+  Set TextToFill_2 = DrwTexts.GetItem(string2)
+
+  Person = TextToFill_1.Text
+  If (Person = Text_24) Then
+    Person = Text_11
+  End If
+
+  Person = InputBox(Message_11  + string3 +Message_12 , Message_13 , Person)
+  If (Person = "") Then
+    Person = Text_24
+  End If
+
+  TextToFill_1.Text = Person
+  TextToFill_2.Text = Date
+End Sub
+
+
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+
+Sub CATMoveReference()
+  '-------------------------------------------------------------------------------
+  ' Deplacer le texte de reference
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+   Set Text = DrwTexts.GetItem("Reference_" + MacroID)
+   If Err.Number <> 0 Then
+     Err.Clear
+     TranslationX = .0
+     TranslationY = .0
+     Exit Sub
+   End If
+  On Error Goto 0
+
+  TranslationX = Largeur - Marge - Text.x
+  TranslationY = Hauteur - Marge - Text.y
+  Text.x = Text.x + TranslationX
+  Text.y = Text.y + TranslationY
+
+End Sub
+
+Sub CATMoveTitleBlock()
+  '-------------------------------------------------------------------------------
+  ' Translation du cartouche après changement de format
+  '-------------------------------------------------------------------------------
+  Dim rootName As String
+  Dim rootNameLength As Integer
+  Dim NbLigneToMove   As Integer
+  Dim NbCercleToMove As Integer
+  Dim NbTextToMove As Integer
+  
+  rootName       = "TitleBlock_Text_"
+  rootNameLength = Len(rootName)
+  NbTextToMove   = DrwTexts.Count
+  For i = 1 To NbTextToMove
+    Set Text = DrwTexts.Item(i)
+    If  (Left(Text.Name, rootNameLength) = rootName) Then
+      Text.x = Text.x + TranslationX
+      Text.y = Text.y 
+    End If
+  Next
+
+  j = Catcheckrev
+
+  For revM = 0 To j-1
+    Set TableauModif = Tableaux.GetItem("RevisionBlock_Text_description_"+ Chr(65 + revM))
+    TableauModif.Move TranslationX, TranslationY
+  Next 
+
+  rootName       = "RevisionBlock_Text_"
+  rootNameLength = Len(rootName)
+  NbTextToMove   = DrwTexts.Count
+  For i = 1 To NbTextToMove
+    Set Text = DrwTexts.Item(i)
+    If  (Left(Text.Name, rootNameLength) = rootName) Then
+      Text.x = Text.x + TranslationX
+      Text.y = Text.y + TranslationY
+    End If
+  Next
+
+End Sub
+
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+
+Sub CATRemoveAll()
+  '-------------------------------------------------------------------------------
+  ' Effacement de tout element de la vue active
+  '-------------------------------------------------------------------------------
+  Dim NbTexts As Integer
+
+  Reponse = MsgBox(Message_6, vbYesNo,Message_7)
+  If Reponse = vbNo Then Exit Sub  
+  NbTexts = DrwTexts.Count
+  For j = 1 To NbTexts
+    DrwTexts.Remove(1)
+  Next
+  For j = 1 To Tableaux.count
+    Tableaux.Remove(1)
+  Next
+  CATRemoveGeometry
+  CATRemoveParameters
+  
+End Sub
+
+Sub CATRemoveGeometry()
+  '-------------------------------------------------------------------------------
+  ' Effacement de tout element geometrique de la vue active
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+   Selection.Clear
+   selection.Add(DrwView)
+   Selection.Search "Drafting.Geometry,sel"
+   If Err.Number <> 0 Then
+     Err.Clear
+     Selection.Clear
+     iNbOfGeomElems = GeomElems.Count
+     ii = 1
+     While (ii <= iNbOfGeomElems)
+       Set GeomElem = GeomElems.Item(ii)
+       Selection.Add(GeomElem)
+       ii = ii + 1
+     Wend
+   End If
+   Selection.Delete
+  On Error Goto 0
+End Sub
+
+Sub CATRemoveFrame()
+  '-------------------------------------------------------------------------------
+  ' Effacement de tout element du cadre de la vue active
+  '-------------------------------------------------------------------------------
+
+  On Error Resume Next
+   Selection.Clear
+   Selection.Add(DrwView)
+   Selection.Search("Drafting.Text.Name     ='Frame_Text_'*, Drawing")
+   If Err.Number = 0 Then
+     Selection.Delete
+   Else
+     Err.Clear
+     iNbOfTexts = DrwTexts.Count
+     ii = iNbOfTexts
+     While (ii > 0)
+       Set Text = DrwTexts.Item(ii)
+       If (Left(Text.Name, 11) = "Frame_Text_")  Then
+         DrwTexts.Remove(ii)
+       End If
+       ii = ii - 1
+     Wend
+   End If
+
+   Selection.Search("Drafting.Geometry.Name ='Frame_'*, Drawing")
+   If Err.Number <> 0 Then
+     Err.Clear
+     Selection.Clear
+     iNbOfGeomElems = GeomElems.Count
+     ii = 1
+     While (ii <= iNbOfGeomElems)
+       Set GeomElem = GeomElems.Item(ii)
+       if (Left(GeomElem.Name, 6) = "Frame_")  Then
+         Selection.Add(GeomElem)
+       End If
+       ii = ii + 1
+     Wend
+   End If
+   Selection.Delete
+  On Error Goto 0
+End Sub
+
+Sub CATRemoveParameters()
+  '-------------------------------------------------------------------------------
+  ' Effacement de touS LES PARAMETRES CREES
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+   parameters1.remove(Text_41)
+   ' parameters1.remove(Text_42)
+   parameters1.remove(Text_43)
+   parameters1.remove(Text_44)
+   parameters1.remove(Text_45)
+   parameters1.remove(Text_46)
+   parameters1.remove(Text_47)
+   parameters1.remove(Text_48)
+   parameters1.remove(Text_49)
+'   parameters1.remove(Text_50)
+   parameters1.remove(Text_51)
+   parameters1.remove(Text_52)
+   parameters1.remove(Text_114)
+'   parameters1.remove(Text_53)
+'   parameters1.remove(Text_54)
+  On Error Goto 0
+End Sub
+
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+
+Sub CATFrame()
+  '-------------------------------------------------------------------------------
+  ' Dessin du cadre
+  '-------------------------------------------------------------------------------
+  Dim Cst_1   As Double  ' Longueur (en cm) entre 2 marques horizontales
+  Dim Cst_2   As Double  ' Longueur (en cm) entre 2 marques verticales
+  Dim Nb_CM_H As Integer ' Nombre/2 de marques horizontales
+  Dim Nb_CM_V As Integer ' Nombre/2 de marques verticales
+  Dim Regle   As Integer ' Longueur de la regle (en cm)
+
+  CATFrameStandard     Nb_CM_H, Nb_CM_V, Regle, Cst_1, Cst_2
+
+  CATFrameBorder
+
+  CATFrameCentringMark Nb_CM_H, Nb_CM_V, Regle, Cst_1, Cst_2
+
+  CATFrameText         Nb_CM_H, Nb_CM_V, Regle, Cst_1, Cst_2
+
+  CATFrameRuler        Regle, Cst_1
+
+End Sub
+
+Sub CATFrameStandard(Nb_CM_H As Integer, Nb_CM_V As Integer, Regle As Integer, Cst_1 As Double, Cst_2 As Double)
+  '-------------------------------------------------------------------------------
+  ' Calcul des valeurs standard pour le cadre
+  '-------------------------------------------------------------------------------
+  Cst_1 = 74.2 '297, 594, 1189 are multiples of 74.2
+  Cst_2 = 52.5 '210, 420, 841  are multiples of 52.2
+  If DrwSheet.Orientation = CatPaperPortrait And _
+     (sheetFormat = CatPaperA0 Or sheetFormat = CatPaperA2 Or sheetFormat = CatPaperA4) Or _
+      DrwSheet.Orientation = CatPaperLandscape And _
+     (sheetFormat = CatPaperA1 Or sheetFormat = CatPaperA3) Then
+    Cst_1 = 52.5
+    Cst_2 = 74.2
+  End If
+
+  Nb_CM_H = CInt(.5 * Largeur / Cst_1)
+  Nb_CM_V = CInt(.5 * Hauteur / Cst_2)
+
+  Regle   = CInt((Nb_CM_H - 1) * Cst_1 / 50) * 100   ' calcul de la logueur maxi de la regle
+  If RulerLength < Regle Then
+    Regle = RulerLength
+  End If
+End Sub
+
+Sub CATFrameBorder()
+  '-------------------------------------------------------------------------------
+  ' Dessin de la bordure du cadre
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+   Set Ligne = Fact.CreateLine(OV, OV             , OH, OV             )
+   Ligne.Name = "Frame_Border_Bottom"
+   Set Ligne = Fact.CreateLine(OH, OV             , OH, Hauteur - Marge)
+   Ligne.Name = "Frame_Border_Left"
+   Set Ligne = Fact.CreateLine(OH, Hauteur - Marge, OV, Hauteur - Marge)
+   Ligne.Name = "Frame_Border_Top"
+   Set Ligne = Fact.CreateLine(OV, Hauteur - Marge, OV, OV             )
+   Ligne.Name = "Frame_Border_Right"
+   If Err.Number <> 0 Then
+     Err.Clear
+   End If
+  On Error Goto 0
+End Sub
+
+Sub CATFrameCentringMark(Nb_CM_H As Integer, Nb_CM_V As Integer, Regle As Integer, Cst_1 As Double, Cst_2 As Double)
+  '-------------------------------------------------------------------------------
+  ' Dessin des marques de centrage
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+   Set Ligne = Fact.CreateLine(.5 * Largeur    , Hauteur - Marge, .5 * Largeur, Hauteur     )
+   Ligne.Name = "Frame_CentringMark_Top"
+   Set Ligne = Fact.CreateLine(.5 * Largeur    , OV             , .5 * Largeur, .0         )
+   Ligne.Name = "Frame_CentringMark_Bottom"
+   Set Ligne = Fact.CreateLine(OV            , .5 * Hauteur    , .0        , .5 * Hauteur)
+   Ligne.Name = "Frame_CentringMark_Left"
+   Set Ligne = Fact.CreateLine(Largeur - Marge, .5 * Hauteur    , Largeur     , .5 * Hauteur)
+   Ligne.Name = "Frame_CentringMark_Right"
+
+   For i = Nb_CM_H To Regle/2/Cst_1 Step -1
+     If (i * Cst_1 < .5 * Largeur - 1.) Then
+       Set Ligne  = Fact.CreateLine(.5 * Largeur + i * Cst_1, OV, .5 * Largeur + i * Cst_1, .25 * Marge)
+       Ligne.Name = "Frame_CentringMark_Bottom"
+       Set Ligne  = Fact.CreateLine(.5 * Largeur - i * Cst_1, OV, .5 * Largeur - i * Cst_1, .25 * Marge)
+       Ligne.Name = "Frame_CentringMark_Bottom"
+     End If
+   Next
+
+   For i = 1 To Nb_CM_H
+     If (i * Cst_1 < .5 * Largeur - 1.) Then
+       Set Ligne  = Fact.CreateLine(.5 * Largeur + i * Cst_1, Hauteur - Marge, .5 * Largeur + i * Cst_1, Hauteur - .25 * Marge)
+       Ligne.Name = "Frame_CentringMark_Top"
+       Set Ligne  = Fact.CreateLine(.5 * Largeur - i * Cst_1, Hauteur - Marge, .5 * Largeur - i * Cst_1, Hauteur - .25 * Marge)
+       Ligne.Name = "Frame_CentringMark_Top"
+     End If
+   Next
+
+   For i = 1 To Nb_CM_V
+     If (i * Cst_2 < .5 * Hauteur - 1.) Then
+       Set Ligne  = Fact.CreateLine(OV, .5 * Hauteur + i * Cst_2, .25 * Marge        , .5 * Hauteur + i * Cst_2)
+       Ligne.Name = "Frame_CentringMark_Left"
+       Set Ligne  = Fact.CreateLine(OV, .5 * Hauteur - i * Cst_2, .25 * Marge        , .5 * Hauteur - i * Cst_2)
+       Ligne.Name = "Frame_CentringMark_Left"
+       Set Ligne  = Fact.CreateLine(OH, .5 * Hauteur + i * Cst_2, Largeur - .25 * Marge, .5 * Hauteur + i * Cst_2)
+       Ligne.Name = "Frame_CentringMark_Right"
+       Set Ligne  = Fact.CreateLine(OH, .5 * Hauteur - i * Cst_2, Largeur - .25 * Marge, .5 * Hauteur - i * Cst_2)
+       Ligne.Name = "Frame_CentringMark_Right"
+     End If
+   Next
+
+   If Err.Number <> 0 Then
+    Err.Clear
+   End If
+  On Error Goto 0
+End Sub
+
+Sub CATFrameText(Nb_CM_H As Integer, Nb_CM_V As Integer, Regle As Integer, Cst_1 As Double, Cst_2 As Double)
+  '-------------------------------------------------------------------------------
+  ' Creation des textes du cadre
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+
+   For i = Nb_CM_H To (Regle/2/Cst_1 + 1) Step -1
+     Set Text = DrwTexts.Add(Chr(65 + Nb_CM_H - i) , .5 * Largeur + (i - .5) * Cst_1, .5 * Marge)
+     CATFormatFText "Frame_Text_Bottom", 0
+     Set Text = DrwTexts.Add(Chr(64 + Nb_CM_H + i) , .5 * Largeur - (i - .5) * Cst_1, .5 * Marge)
+     CATFormatFText "Frame_Text_Bottom", 0
+   Next
+   For i = 1 To Nb_CM_H
+     Set Text = DrwTexts.Add(Chr(65 + Nb_CM_H - i), .5 * Largeur + (i - .5) * Cst_1, Hauteur - .5 * Marge)
+     CATFormatFText "Frame_Text_Top", -90
+     Set Text = DrwTexts.Add(Chr(64 + Nb_CM_H + i), .5 * Largeur - (i - .5) * Cst_1, Hauteur - .5 * Marge)
+     CATFormatFText "Frame_Text_Top", -90
+   Next
+
+   For i = 1 To Nb_CM_V
+     Set Text = DrwTexts.Add(CStr(Nb_CM_V + i)     , .5 * Marge        , .5 * Hauteur + (i - .5) * Cst_2)
+     CATFormatFText "Frame_Text_Left", -90
+     Set Text = DrwTexts.Add(CStr(Nb_CM_V - i + 1) , .5 * Marge        , .5 * Hauteur - (i - .5) * Cst_2)
+     CATFormatFText "Frame_Text_Left", -90
+     Set Text = DrwTexts.Add(CStr(Nb_CM_V + i)    , Largeur - .5 * Marge, .5 * Hauteur + (i - .5) * Cst_2)
+     CATFormatFText "Frame_Text_Right", 0
+     Set Text = DrwTexts.Add(CStr(Nb_CM_V - i + 1), Largeur - .5 * Marge, .5 * Hauteur - (i - .5) * Cst_2)
+     CATFormatFText "Frame_Text_Right", 0
+   Next
+
+   If Err.Number <> 0 Then
+     Err.Clear
+   End If
+  On Error Goto 0
+End Sub
+
+Sub CATFrameRuler(Regle As Integer, Cst_1 As Single)
+  '-------------------------------------------------------------------------------
+  ' Dessin de la regle
+  '-------------------------------------------------------------------------------
+  'Frame_Regle_Guide -----------------------------------------------
+  'Frame_Regle_1cm   | | | | | | | | | | | | | | | | | | | | | | | |
+  'Frame_Regle_5cm   |         |         |         |         |      
+  
+  On Error Resume Next
+   Set Ligne = Fact.CreateLine(.5 * Largeur - Regle/2 , .75 * Marge, .5 * Largeur + Regle/2, .75 * Marge)
+   Ligne.Name = "Frame_Regle_Guide"
+
+   For i = 1 To Regle/100
+     Set Ligne = Fact.CreateLine(.5 * Largeur - 50 * i, OV, .5 * Largeur - 50 * i, .5 * Marge )
+     Ligne.Name = "Frame_Regle_5cm"
+     Set Ligne = Fact.CreateLine(.5 * Largeur + 50 * i, OV, .5 * Largeur + 50 * i, .5 * Marge )
+     Ligne.Name = "Frame_Regle_5cm"
+     For j = 1 To 4
+       Set Ligne = Fact.CreateLine(.5 * Largeur - 50 * i + 10 * j, OV, .5 * Largeur - 50 * i + 10 * j, .75 * Marge)
+       Ligne.Name = "Frame_Regle_1cm"
+       Set Ligne = Fact.CreateLine(.5 * Largeur + 50 * i - 10 * j, OV, .5 * Largeur + 50 * i - 10 * j, .75 * Marge)
+       Ligne.Name = "Frame_Regle_1cm"
+     Next
+   Next
+
+   If Err.Number <> 0 Then
+     Err.Clear
+   End If
+  On Error Goto 0
+End Sub
+
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+'*****************************************************************************************************************************
+
+Sub CATTitleBlockStandard()
+  '-------------------------------------------------------------------------------
+  ' Dessin de la representation de la norme de projection
+  '-------------------------------------------------------------------------------
+  Dim R1   As Double
+  Dim R2   As Double
+  Dim X(5) As Double
+  Dim Y(7) As Double
+
+  R1   = 1.6
+  R2   = 3.2
+  X(1) = OH   + Col(11) + 1
+  X(2) = X(1) + 2.5
+  X(3) = X(1) + 8.5
+  X(4) = X(1) + 13
+  X(5) = X(1) + 17
+ ' Y(1) = OV   + (Row(5)+Row(4))/2.
+  Y(1) = OV   + Row(5)
+Y(2) = Y(1) + R1
+  Y(3) = Y(1) + R2
+  Y(4) = Y(1) + 5.5
+  Y(5) = Y(1) - R1
+  Y(6) = Y(1) - R2
+  Y(7) = 2*Y(1) - Y(4)
+
+  If DrwSheet.ProjectionMethod <> CatFirstAngle Then
+    X(2) = X(1) + X(5) - X(2)
+    X(3) = X(1) + X(5) - X(3)
+    X(4) = X(1) + X(5) - X(4)
+  End If
+
+  On Error Resume Next
+   Set Ligne   = Fact.CreateLine(X(1), Y(1), X(5), Y(1))
+   Ligne.Name   = "TitleBlock_Standard_Ligne_Axis_1"
+   Set Ligne   = Fact.CreateLine(X(4), Y(7), X(4), Y(4))
+   Ligne.Name   = "TitleBlock_Standard_Ligne_Axis_2"
+   Set Ligne   = Fact.CreateLine(X(2), Y(5), X(2), Y(2))
+   Ligne.Name   = "TitleBlock_Standard_Ligne_1"
+   Set Ligne   = Fact.CreateLine(X(2), Y(2), X(3), Y(3))
+   Ligne.Name   = "TitleBlock_Standard_Ligne_2"
+   Set Ligne   = Fact.CreateLine(X(3), Y(3), X(3), Y(6))
+   Ligne.Name   = "TitleBlock_Standard_Ligne_3"
+   Set Ligne   = Fact.CreateLine(X(3), Y(6), X(2), Y(5))
+   Ligne.Name   = "TitleBlock_Standard_Ligne_4"
+   Set Cercle = Fact.CreateClosedCircle(X(4), Y(1), R1)
+   Cercle.Name = "TitleBlock_Standard_Cercle_1"
+   Set Cercle = Fact.CreateClosedCircle(X(4), Y(1), R2)
+   Cercle.Name = "TitleBlock_Standard_Cercle_2"
+ If Err.Number <> 0 Then
+   Err.Clear 
+ End If
+ On Error Goto 0
+End Sub
+
+Sub CATRemoveStandard()
+  '-------------------------------------------------------------------------------
+  ' Effacement de la representation de la norme de projection
+  '-------------------------------------------------------------------------------
+  On Error Resume Next
+   Selection.Clear
+   selection.Add(DrwView)
+   selection.Search "(Name=TitleBlock_Standard_* & CATDrwSearch.2DGeometry),all"
+   If Err.Number <> 0 Then
+     Err.Clear
+   else
+     Selection.Delete
+   End If
+  On Error Goto 0
+End Sub
+
+'*****************************************************************************************************************************
+
+
+Sub CATFormatFText(textName As String, angle As Double)
+  '-------------------------------------------------------------------------------
+  ' Format des textes du cadre (Format of the texts of the frame)
+  '-------------------------------------------------------------------------------
+  Text.Name           = textName
+  Text.AnchorPosition = CATMiddleCenter
+  Text.Angle          = angle
+End Sub
+
+
+Sub CATFormatTBText(textName As String, anchorPosition As String, fontSize)
+  '-------------------------------------------------------------------------------
+  ' Format des textes du cartouche (Format of the texts of the cartouche)
+  '-------------------------------------------------------------------------------
+  Text.Name           = textName
+  'Text.SetFontName      0, 0, "Monospac821 BT"
+'  Text.SetFontName      0, 0, "Arial (TrueType)"
+'  Text.SetFontName 0, 0, "SimSun (TrueType)"
+    Text.SetFontName 0, 0, "YouYuan (TrueType)"
+  Text.AnchorPosition = anchorPosition
+  Text.SetFontSize      0, 0, fontSize
+End Sub
+
+
+Sub CATFormatRBText(textName As String, anchorPosition As String)
+  '-------------------------------------------------------------------------------
+  ' Format des textes du cartouche à la taille de 3.5 (Format of the texts of the cartouche in the size of 3.5)
+  '-------------------------------------------------------------------------------
+  Text.Name           = textName
+  Text.AnchorPosition = anchorPosition
+  Text.SetFontSize      0, 0, 3.5
+End Sub
+
+
+Sub CATFormatLOGOText(textName As String, anchorPosition As String, fontSize)
+  '-------------------------------------------------------------------------------
+  ' Format des textes du cartouche (Format of the texts of the cartouche)
+  '-------------------------------------------------------------------------------
+  Text.Name           = textName
+  Text.SetFontName      0, 0, "Franklin Gothic Medium"
+  Text.AnchorPosition = anchorPosition
+  Text.SetFontSize      0, 0, fontSize
+End Sub
+
+
+Sub CATFormatRATIOText(textName As String, anchorPosition As String, ratio, fontSize)
+  '-------------------------------------------------------------------------------
+  ' Format des textes du cartouche  (Format of the texts of the cartouche)
+  '-------------------------------------------------------------------------------
+  Text.Name           = textName
+  Text.SetFontName      0, 0, "Monospac821 BT"
+  Text.AnchorPosition = anchorPosition
+  Text.SetFontSize      0, 0, fontSize
+  Text.Ratio           = ratio 
+End Sub
